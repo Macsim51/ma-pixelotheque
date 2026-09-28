@@ -231,7 +231,7 @@ Limites de la version :
 - pas de suppression définitive coordonnée base/fichiers, de déduplication automatique ou de nettoyage automatique des anciennes générations ;
 - sauvegarde avec arrêt des écritures, sans réplication distante automatique ;
 - fond de carte externe configurable, sans serveur de tuiles local ;
-- raccordement Apache, exposition HTTPS, sauvegarde hors machine et restauration opérationnelle à valider dans l’environnement d’exploitation.
+- exposition HTTPS, sauvegarde hors machine et restauration opérationnelle à valider dans l’environnement d’exploitation ; le raccordement Apache LAN est décrit dans le [bilan de validation](validation.md).
 
 Les évolutions doivent conserver permissions avant agrégation, validation avant publication des fichiers, limites du worker et absence de compilation frontend obligatoire.
 

@@ -72,6 +72,25 @@ La limite d’espace mémoire virtuel de l’enfant reste active ; elle ne rempl
 pas un contrôle mémoire de tous les processus du conteneur. Voir
 [les consignes d’exploitation](deployment.md).
 
-Les vérifications initiales ne modifient pas Apache et ne démarrent pas de service
-de production. L’intégration au frontal existant nécessite l’application des
-[exemples de proxy](reverse-proxy/README.md), puis une validation sur l’URL réelle.
+## Mise en service LAN du 29 septembre 2026
+
+Après autorisation, l’application a été raccordée à l’Apache existant. La
+configuration et l’image précédentes ont été sauvegardées. Une image dérivée
+ajoute les modules de proxy ; les fichiers de retour arrière conservent le refus
+d’accès aux sources dans le documentroot.
+
+Le déploiement utilise le Compose proxy autonome et le service
+`pixelotheque-web`, pour éviter l’alias automatique `web` déjà utilisé sur le
+réseau partagé. Aucun port hôte n’est publié par la photothèque. Les données sont
+sur le NVMe privé et les originaux sont montés en lecture seule dans le worker.
+
+Les contrôles réels sur l’URL LAN passent : santé, connexion administrateur,
+CSRF, cookies préfixés, fichiers d’interface, huit pages authentifiées et refus
+des chemins source. SQLite signale une intégrité correcte et utilise le journal
+standard. Un chemin de partage de contrôle n’apparaît pas dans les logs Apache
+et est expurgé dans les logs Django.
+
+Seul le conteneur Apache a été recréé. Les autres conteneurs existants ont conservé
+leur identifiant et leur état actif. Six pages témoins, dont trois sites PHP,
+conservent leurs codes HTTP et leurs redirections. Les étapes HTTPS et sauvegarde
+sur un autre support restent à réaliser avant une exposition Internet.
