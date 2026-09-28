@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ error_title }} · Ma Pixelothèque{% endblock %}
+{% block content %}
+<section class="empty-state panel" aria-labelledby="error-title">
+  <p class="eyebrow">{{ error_code }}</p>
+  <h1 id="error-title">{{ error_title }}</h1>
+  <p class="muted">{{ error_message }}</p>
+  <a class="button button-primary" href="{% url 'home' %}">Revenir à l’accueil</a>
+</section>
+{% endblock %}

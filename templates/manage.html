@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Administration · Ma Pixelothèque{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">Administration</p><h1>La photothèque en un regard</h1><p class="muted">Les albums, les photos et les traitements en cours.</p></div><a class="button button-secondary" href="{% url 'admin:index' %}">Administration avancée</a></header>
+<div class="stats-grid">
+  <div class="panel stat"><strong>{{ media_count }}</strong><span>Photos</span></div>
+  <div class="panel stat"><strong>{{ album_count }}</strong><span>Albums</span></div>
+  <div class="panel stat"><strong>{{ job_counts.pending|default:0 }}</strong><span>Traitements en attente</span></div>
+  <div class="panel stat"><strong>{{ job_counts.error|default:0 }}</strong><span>Traitements en erreur</span></div>
+</div>
+<div class="settings-grid">
+  <section class="panel"><h2>Traitements des images</h2><p>{% if settings.worker_paused %}Le worker est en pause.{% else %}Le worker peut traiter les photos en attente.{% endif %}</p><p class="muted">Un seul traitement à la fois. Les miniatures existantes restent disponibles pendant leur régénération.</p><div class="form-actions"><a class="button" href="{% url 'admin:processing_processingjob_changelist' %}">Voir les traitements</a><a class="button" href="{% url 'admin:core_appsetting_change' 1 %}">Réglages</a></div></section>
+  <section class="panel"><h2>Comptes et accès</h2><p>Créez les comptes de votre famille et de vos invités, puis choisissez les albums qu’ils peuvent consulter.</p><a class="button" href="{% url 'admin:accounts_user_changelist' %}">Gérer les utilisateurs</a></section>
+</div>
+{% if errors %}<section class="panel recent-errors"><h2>Derniers traitements en erreur</h2><ul>{% for job in errors %}<li><a href="{% url 'admin:processing_processingjob_change' job.pk %}">{{ job.media.title|default:job.media.original_name }}</a></li>{% endfor %}</ul></section>{% endif %}
+{% endblock %}

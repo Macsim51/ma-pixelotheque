@@ -1,0 +1,24 @@
+# Liste positive : bases, médias, secrets et historique Git sont hors image.
+*
+!requirements.txt
+!LICENSE
+!manage.py
+!pixelotheque/
+!pixelotheque/**
+!apps/
+!apps/**
+!templates/
+!templates/**
+!static/
+!static/**
+!tests/
+!tests/**
+!scripts/
+!scripts/**
+**/__pycache__/
+**/*.py[cod]
+**/.env
+**/*.env
+**/*.sqlite3*
+**/*.pem
+**/*.key

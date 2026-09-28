@@ -1,0 +1,29 @@
+# Compose autonome : ne pas le superposer à docker-compose.yml.
+# scripts/compose-proxy.sh lance la commande depuis la racine du dépôt.
+# Un nom de service spécifique évite l'alias automatique « web » sur le réseau
+# partagé. Les alias déclarés ne remplacent pas le nom du service dans Compose.
+name: ma-pixelotheque
+
+services:
+  pixelotheque-web:
+    extends:
+      file: ../../docker-compose.yml
+      service: web
+    ports: !reset []
+    networks:
+      proxy:
+        aliases:
+          - pixelotheque-web
+
+  worker:
+    extends:
+      file: ../../docker-compose.yml
+      service: worker
+    networks:
+      - default
+
+networks:
+  default: {}
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-my_network}

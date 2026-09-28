@@ -1,0 +1,25 @@
+{% extends "sharing/base.html" %}
+{% block title %}{{ share.album.title }} · Album partagé{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div><p class="eyebrow">Album partagé</p><h1>{{ share.album.title }}</h1>
+  {% if share.album.description %}<p>{{ share.album.description|linebreaksbr }}</p>{% endif %}
+  <p class="muted">{{ page_obj.paginator.count }} photo{{ page_obj.paginator.count|pluralize }}</p></div>
+</header>
+<div class="photo-grid">
+  {% for photo in page_obj %}
+  <a class="photo-card" href="{% url 'sharing:photo' token=token media_id=photo.pk %}">
+    {% if photo.thumbnail_key %}<img src="{% url 'sharing:file' token=token media_id=photo.pk variant='thumbnail' %}" alt="{{ photo.title|default:'Photo de l’album' }}" loading="lazy" decoding="async">
+    {% else %}<span class="photo-placeholder">Aperçu en préparation</span>{% endif %}
+    {% if photo.title %}<span class="photo-caption">{{ photo.title }}</span>{% endif %}
+  </a>
+  {% empty %}<p class="empty-state">Les photos de cet album ne sont pas encore disponibles.</p>{% endfor %}
+</div>
+{% if page_obj.has_other_pages %}
+<nav class="pagination" aria-label="Pages de l’album">
+  {% if page_obj.has_previous %}<a class="button" href="?page={{ page_obj.previous_page_number }}">Précédent</a>{% endif %}
+  <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="button" href="?page={{ page_obj.next_page_number }}">Suivant</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

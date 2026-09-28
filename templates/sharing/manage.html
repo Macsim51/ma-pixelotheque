@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Partager {{ album.title }} · Ma Pixelothèque{% endblock %}
+{% block content %}
+<a class="back-link" href="{% url 'library:album_detail' pk=album.pk %}">← {{ album.title }}</a>
+<header class="page-header"><div><p class="eyebrow">Inviter vos proches</p><h1>Partager cet album</h1><p>Un lien ouvre seulement cet album, sans demander de compte.</p></div></header>
+{% if created_url %}
+<section class="card panel" aria-labelledby="new-link-title">
+  <h2 id="new-link-title">Votre lien est prêt</h2>
+  <p>Copiez-le maintenant : il ne sera plus affiché après avoir quitté cette page.</p>
+  <label for="created-link">Lien privé</label><input id="created-link" type="url" value="{{ created_url }}" readonly>
+  <p><a class="button" href="{{ created_url }}" target="_blank" rel="noopener noreferrer">Ouvrir l’album partagé</a></p>
+</section>
+{% endif %}
+<section class="card panel" aria-labelledby="create-share-title">
+  <h2 id="create-share-title">Créer un lien</h2>
+  <form method="post" class="stack">{% csrf_token %}{{ form.as_p }}<button class="button button-primary" type="submit">Créer le lien privé</button></form>
+  <p class="muted">Toute personne qui possède ce lien peut voir l’album. Désactiver le téléchargement bloque les originaux ; une image affichée peut toujours être enregistrée.</p>
+</section>
+<section aria-labelledby="existing-shares-title">
+  <h2 id="existing-shares-title">Liens créés</h2>
+  {% for link in page_obj %}
+  <article class="card panel">
+    <h3>Lien du {{ link.created_at|date:"j F Y à H:i" }}</h3>
+    <p>{% if link.revoked_at %}Révoqué définitivement{% elif link.is_expired %}Expiré{% elif link.active %}Actif{% else %}Désactivé{% endif %} · {{ link.access_count }} ouverture{{ link.access_count|pluralize }}</p>
+    {% if link.expires_at %}<p>Expiration : {{ link.expires_at|date:"j F Y à H:i" }}</p>{% endif %}
+    <p>Originaux : {% if link.allow_download %}téléchargement autorisé{% else %}téléchargement désactivé{% endif %}</p>
+    {% if not link.revoked_at %}
+    <div class="form-actions">
+      {% if not link.is_expired %}
+      <form method="post" action="{% url 'sharing:change_link' album_id=album.pk link_id=link.pk action=link.active|yesno:'disable,enable' %}">{% csrf_token %}<button class="button" type="submit">{% if link.active %}Désactiver{% else %}Réactiver{% endif %}</button></form>
+      {% endif %}
+      <form method="post" action="{% url 'sharing:change_link' album_id=album.pk link_id=link.pk action='revoke' %}">{% csrf_token %}<button class="button" type="submit">Révoquer définitivement</button></form>
+    </div>
+    {% endif %}
+  </article>
+  {% empty %}<p>Aucun lien n’a encore été créé pour cet album.</p>{% endfor %}
+</section>
+{% if page_obj.has_other_pages %}<nav class="pagination" aria-label="Pages des liens">
+  {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Précédent</a>{% endif %}
+  <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Suivant</a>{% endif %}
+</nav>{% endif %}
+{% endblock %}

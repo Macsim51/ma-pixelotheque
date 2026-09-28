@@ -1,0 +1,7 @@
+{% if page_obj.has_other_pages %}
+<nav class="pagination" aria-label="Pages de photos">
+  {% if page_obj.has_previous %}<a class="button button-secondary" href="?{{ pagination_query }}&amp;page={{ page_obj.previous_page_number }}" rel="prev">Précédente</a>{% endif %}
+  <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="button button-secondary" href="?{{ pagination_query }}&amp;page={{ page_obj.next_page_number }}" rel="next">Suivante</a>{% endif %}
+</nav>
+{% endif %}

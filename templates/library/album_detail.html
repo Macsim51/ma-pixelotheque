@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ album.title }} · Ma Pixelothèque{% endblock %}
+{% block content %}
+<section aria-labelledby="page-title">
+  <a class="back-link" href="{% url 'library:album_list' %}">← Tous les albums</a>
+  <header class="page-header">
+    <div>
+      <span class="badge">{{ album.get_visibility_display }}</span>
+      <h1 id="page-title">{{ album.title }}</h1>
+      <p class="muted">Créé par {{ album.owner.username }} · {{ album.created_at|date:"j F Y" }}</p>
+    </div>
+    <div class="page-actions">
+      {% if can_upload_album %}<a class="button button-primary" href="{% url 'processing:upload' %}?album={{ album.pk }}">Ajouter des photos</a>{% endif %}
+      {% if can_manage_album %}<a class="button button-secondary" href="{% url 'library:album_edit' album.pk %}">Modifier l’album</a>{% endif %}
+      {% if can_share_album %}<a class="button button-secondary" href="{% url 'sharing:manage' album_id=album.pk %}">Partager l’album</a>{% endif %}
+    </div>
+  </header>
+  {% if album.description %}<div class="album-description">{{ album.description|linebreaks }}</div>{% endif %}
+  {% include "library/_media_grid.html" %}
+  {% include "library/_media_pagination.html" %}
+</section>
+{% endblock %}

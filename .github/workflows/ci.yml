@@ -1,0 +1,46 @@
+name: Django checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DJANGO_SETTINGS_MODULE: pixelotheque.settings_test
+      DATABASE_PATH: /tmp/pixelotheque-ci.sqlite3
+      DATABASE_TEST_PATH: /tmp/pixelotheque-test.sqlite3
+      STATIC_ROOT: /tmp/pixelotheque-static
+      MEDIA_ROOT: /tmp/pixelotheque-media
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13.15"
+          cache: pip
+      - name: Installer les dépendances figées
+        run: python -m pip install --only-binary=:all: -r requirements.txt
+      - name: Vérifier les dépendances et migrations
+        run: |
+          python -m pip check
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python manage.py migrate --noinput
+      - name: Tester sur une base SQLite fichier
+        run: python manage.py test --noinput
+      - name: Vérifier les statiques avec les réglages de production
+        env:
+          DJANGO_SETTINGS_MODULE: pixelotheque.settings
+          DJANGO_SECRET_KEY: ci-only-public-placeholder-0123456789abcdefghijklmnopqrstuvwxyz
+          DJANGO_DEBUG: "False"
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+        run: python manage.py collectstatic --noinput
+      - name: Vérifier le parcours HTTP réel et le sous-chemin
+        run: python tests/smoke_http.py

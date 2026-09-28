@@ -1,0 +1,3 @@
+* text=auto eol=lf
+# Preserve upstream bytes, including CRLF, so published hashes stay verifiable.
+static/vendor/** -text -whitespace

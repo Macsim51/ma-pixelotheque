@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Carte des photos · Ma Pixelothèque{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endblock %}
+{% block content %}
+<section aria-labelledby="page-title">
+  <header class="page-header"><div><p class="eyebrow">Les lieux de vos souvenirs</p><h1 id="page-title">Carte des photos</h1><p class="muted">Explorez la carte et sélectionnez un groupe pour voir ses photos.</p></div></header>
+  <p class="help-text">Le fond de carte est fourni par un service externe, qui reçoit votre adresse IP et la zone consultée.</p>
+  <div id="photo-map" class="photo-map" data-map-url="{% url 'library:map_data' %}" data-photos-url="{% url 'library:map_photos' %}" aria-label="Carte des photos géolocalisées"></div>
+  <p id="map-status" class="muted" role="status" aria-live="polite"></p>
+  <noscript><p>Activez JavaScript pour explorer la carte.</p></noscript>
+  {{ map_config|json_script:"map-config" }}
+</section>
+{% endblock %}
+{% block extra_scripts %}<script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script><script src="{% static 'js/map.js' %}" defer></script>{% endblock %}

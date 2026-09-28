@@ -1,0 +1,9 @@
+{% extends "sharing/base.html" %}
+{% block title %}{{ error_title }}{% endblock %}
+{% block content %}
+<section class="empty-state">
+  <p class="eyebrow">{{ error_code }}</p>
+  <h1>{{ error_title }}</h1>
+  <p>{{ error_message }}</p>
+</section>
+{% endblock %}

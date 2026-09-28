@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ media.title|default:media.original_name }} · Ma Pixelothèque{% endblock %}
+{% block content %}
+<article class="lightbox-page" data-lightbox data-back-url="{{ back_url }}" {% if previous_media %}data-prev-url="{% url 'library:media_detail' previous_media.pk %}?{{ navigation_query }}"{% endif %} {% if next_media %}data-next-url="{% url 'library:media_detail' next_media.pk %}?{{ navigation_query }}"{% endif %}>
+  <a class="back-link" href="{{ back_url }}">← Retour aux photos</a>
+  <div class="lightbox-layout">
+    <section class="lightbox-image" aria-label="Photo">
+      {% if media.status == 'ready' and media.preview_key %}
+      <img src="{% url 'library:media_file' media.pk 'preview' %}" alt="{{ media.title|default:media.original_name }}" width="{{ media.width }}" height="{{ media.height }}">
+      {% elif media.status == 'ready' and media.thumbnail_key %}
+      <img src="{% url 'library:media_file' media.pk 'thumbnail' %}" alt="{{ media.title|default:media.original_name }}">
+      {% else %}<div class="empty-state"><span aria-hidden="true">▧</span><p>{% if media.status == 'ready' %}L’aperçu de cette photo n’est pas disponible.{% else %}{{ media.get_status_display }}{% endif %}</p></div>{% endif %}
+      <nav class="lightbox-navigation" aria-label="Photos voisines">
+        {% if previous_media %}<a class="button button-secondary" href="{% url 'library:media_detail' previous_media.pk %}?{{ navigation_query }}" rel="prev">← Précédente</a>{% endif %}
+        {% if next_media %}<a class="button button-secondary" href="{% url 'library:media_detail' next_media.pk %}?{{ navigation_query }}" rel="next">Suivante →</a>{% endif %}
+      </nav>
+    </section>
+    <section class="photo-details" aria-labelledby="photo-title">
+      <h1 id="photo-title">{{ media.title|default:media.original_name }}</h1>
+      <p class="muted">{{ media.sort_date|date:"j F Y à H:i" }}</p>
+      {% if media.description %}<div>{{ media.description|linebreaks }}</div>{% endif %}
+      <div class="tag-list">{% for tag in media.tags.all %}<span class="badge">{{ tag.name }}</span>{% endfor %}</div>
+      <dl class="photo-metadata">
+        <dt>Ajoutée par</dt><dd>{{ media.uploader.username }}</dd>
+        {% if media.camera %}<dt>Appareil</dt><dd>{{ media.camera }}</dd>{% endif %}
+        {% if media.width and media.height %}<dt>Dimensions</dt><dd>{{ media.width }} × {{ media.height }} pixels</dd>{% endif %}
+        {% if media.latitude != None %}<dt>Coordonnées</dt><dd>{{ media.latitude|floatformat:5 }}, {{ media.longitude|floatformat:5 }}</dd>{% endif %}
+        <dt>Albums</dt><dd>{% for album in visible_albums %}<a href="{% url 'library:album_detail' album.pk %}">{{ album.title }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</dd>
+      </dl>
+      <div class="photo-actions">
+        {% if media.status == 'ready' %}{% include "library/_favorite_button.html" %}{% endif %}
+        {% if can_edit_media %}<a class="button button-secondary" href="{% url 'library:media_edit' media.pk %}">Modifier les informations</a>{% endif %}
+        {% if can_download %}<a class="button button-secondary" href="{% url 'library:media_file' media.pk 'original' %}">Télécharger l’original</a>{% endif %}
+      </div>
+    </section>
+  </div>
+</article>
+{% endblock %}

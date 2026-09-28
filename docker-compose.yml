@@ -1,0 +1,88 @@
+name: ma-pixelotheque
+
+services:
+  web: &application
+    image: ${PIXEL_IMAGE:-ma-pixelotheque:local}
+    build:
+      context: .
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    init: true
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Initialiser un fichier env privé avec scripts/init_env.py}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
+      APP_BASE_PATH: ${APP_BASE_PATH:-}
+      APP_HTTPS: ${APP_HTTPS:-False}
+      TRUST_PROXY_HTTPS: ${TRUST_PROXY_HTTPS:-False}
+      DATABASE_PATH: /data/db.sqlite3
+      MEDIA_ROOT: /media
+      STATIC_ROOT: /app/staticfiles
+      TZ: ${TZ:-Europe/Paris}
+      MAP_TILE_URL: ${MAP_TILE_URL-https://tile.openstreetmap.org/{z}/{x}/{y}.png}
+    volumes:
+      - type: bind
+        source: ${DATA_DIR:-./var/data}
+        target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${MEDIA_DIR:-./var/media}
+        target: /media
+        bind:
+          create_host_path: false
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-8000}:8000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=67108864,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+    stop_grace_period: 35s
+    healthcheck:
+      test: ["CMD", "python", "/app/scripts/healthcheck.py"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  worker:
+    <<: *application
+    command: ["python", "manage.py", "process_jobs", "--poll-interval=5"]
+    ports: []
+    healthcheck:
+      disable: true
+    mem_limit: 896m
+    cpus: 0.75
+    volumes:
+      - type: bind
+        source: ${DATA_DIR:-./var/data}
+        target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${MEDIA_DIR:-./var/media}
+        target: /media
+        bind:
+          create_host_path: false
+      # Le worker peut écrire ses dérivés, jamais altérer les originaux.
+      - type: bind
+        source: ${MEDIA_DIR:-./var/media}/originals
+        target: /media/originals
+        read_only: true
+        bind:
+          create_host_path: false

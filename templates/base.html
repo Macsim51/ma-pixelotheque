@@ -1,0 +1,87 @@
+{% load static %}
+<!doctype html>
+<html lang="fr" data-theme="{% if request.user.is_authenticated %}{{ request.user.theme }}{% else %}system{% endif %}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="htmx-config" content='{"historyCacheSize":0,"allowEval":false,"allowScriptTags":false}'>
+  <title>{% block title %}Ma Pixelothèque{% endblock %}</title>
+  <link rel="icon" href="{% static 'images/mark.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/theme.js' %}" defer></script>
+  <script src="{% static 'vendor/htmx/htmx.min.js' %}" defer></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body hx-history="false" class="{% if request.user.is_authenticated %}authenticated{% else %}anonymous{% endif %}">
+  <a class="skip-link" href="#main-content">Aller au contenu</a>
+  <header class="site-header">
+    <a class="brand" href="{% url 'home' %}" aria-label="Ma Pixelothèque — accueil">
+      <img src="{% static 'images/mark.svg' %}" alt="" width="36" height="36">
+      <span>Ma Pixelothèque<span class="brand-caption">Les petits et les grands moments.</span></span>
+    </a>
+    {% if request.user.is_authenticated %}
+    <div class="header-account">
+      {% if request.user.is_superuser or request.user.role == 'family' %}<a class="button button-primary upload-link" href="{% url 'processing:upload' %}" aria-label="Ajouter des photos"><span aria-hidden="true">＋</span><span class="upload-label">Ajouter des photos</span></a>{% endif %}
+      <a class="account-link" href="{% url 'accounts:account' %}"><span class="avatar" aria-hidden="true">{{ request.user.username|first|upper }}</span><span class="account-name">{{ request.user.username }}</span></a>
+      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="text-button logout-button" type="submit" aria-label="Déconnexion"><span class="logout-label">Déconnexion</span><svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M10 4H4v16h6M9 12h12m-4-4 4 4-4 4"/></svg></button></form>
+    </div>
+    {% endif %}
+  </header>
+  <div class="app-layout">
+    {% if request.user.is_authenticated %}
+    <aside class="sidebar">
+      <nav class="main-nav" aria-label="Navigation principale">
+        {% if request.user.is_superuser or request.user.role == 'family' %}
+        <a href="{% url 'library:timeline' %}" {% if 'timeline' in request.resolver_match.url_name or request.resolver_match.url_name == 'media_detail' %}aria-current="page"{% endif %}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
+          Photos
+        </a>
+        {% endif %}
+        <a href="{% url 'library:album_list' %}" {% if 'album' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="3"/><path d="M7 3h10M8 16l3-3 3 3 2-2 4 4"/><circle cx="15.5" cy="10.5" r="1"/></svg>
+          Mes albums
+        </a>
+        {% if request.user.is_superuser or request.user.role == 'family' %}
+        <a href="{% url 'library:map' %}" {% if 'map' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Carte
+        </a>
+        <a href="{% url 'library:search' %}" {% if request.resolver_match.url_name == 'search' %}aria-current="page"{% endif %}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6"/></svg>
+          Rechercher
+        </a>
+        {% endif %}
+        <a href="{% url 'library:favorites' %}" {% if request.resolver_match.url_name == 'favorites' %}aria-current="page"{% endif %}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 21S2 15 2 8a5 5 0 0 1 10-1 5 5 0 0 1 10 1c0 7-10 13-10 13z"/></svg>
+          Favoris
+        </a>
+        <a href="{% url 'accounts:account' %}" {% if request.resolver_match.url_name == 'account' %}aria-current="page"{% endif %}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>
+          Mon compte
+        </a>
+        {% if request.user.is_superuser %}
+        <a href="{% url 'manage' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3l8 3v6c0 4-5 8-8 9-3-1-8-5-8-9V6z"/><path d="M8 12l3 3 5-6"/></svg>
+          Administration
+        </a>
+        {% endif %}
+      </nav>
+      <p class="sidebar-note">Des souvenirs à garder.<br>Des moments à retrouver.</p>
+    </aside>
+    {% endif %}
+    <main id="main-content" class="main-content" tabindex="-1">
+      {% if messages %}
+      <div class="messages" aria-live="polite">
+        {% for message in messages %}<p class="message {{ message.tags }}">{{ message }}</p>{% endfor %}
+      </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <footer class="site-footer">Ma Pixelothèque <span aria-hidden="true">·</span> Votre famille, vos souvenirs. <span aria-hidden="true">·</span> <a href="https://github.com/Macsim51/ma-pixelotheque" rel="noreferrer">Code source</a></footer>
+  {% block extra_scripts %}{% endblock %}
+  <script src="{% static 'js/lightbox.js' %}" defer></script>
+</body>
+</html>

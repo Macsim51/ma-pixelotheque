@@ -1,0 +1,23 @@
+{% load static %}
+<!doctype html>
+<html lang="fr" data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="referrer" content="no-referrer">
+  <title>{% block title %}Album partagé{% endblock %}</title>
+  <link rel="icon" href="{% static 'images/mark.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="shared-page anonymous">
+  <a class="skip-link" href="#main-content">Aller au contenu</a>
+  <header class="site-header">
+    <span class="brand"><img src="{% static 'images/mark.svg' %}" alt="" width="36" height="36"><span>Un album à partager</span></span>
+  </header>
+  <main id="main-content" class="main-content shared-content" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

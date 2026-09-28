@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Recherche · Ma Pixelothèque{% endblock %}
+{% block content %}
+<section aria-labelledby="page-title">
+  <header class="page-header"><div><p class="eyebrow">Retrouver un moment</p><h1 id="page-title">Recherche</h1></div></header>
+  <form method="get" class="card form-card search-form">
+    {{ search_form.non_field_errors }}
+    {% for field in search_form %}<div class="form-field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+    <div class="form-actions"><button class="button button-primary" type="submit">Rechercher</button><a class="button button-secondary" href="{% url 'library:search' %}">Effacer les filtres</a></div>
+  </form>
+  {% include "library/_media_grid.html" %}
+  {% include "library/_media_pagination.html" %}
+</section>
+{% endblock %}

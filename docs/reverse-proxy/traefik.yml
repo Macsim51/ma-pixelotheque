@@ -1,0 +1,42 @@
+# Configuration dynamique pour le file provider de Traefik 3.3 ou ultérieur.
+# Les options observability sont vérifiées dans la documentation 3.3 ; ce fichier
+# n'est pas présenté comme compatible avec Traefik 2 ou toutes les versions 3.
+# L'entrypoint websecure et les certificats sont configurés dans Traefik.
+http:
+  routers:
+    pixelotheque:
+      rule: "Host(`photos.example.org`) && (Path(`/ma-pixelotheque`) || PathPrefix(`/ma-pixelotheque/`))"
+      entryPoints: [websecure]
+      tls: {}
+      service: pixelotheque
+      # Ne pas exporter les URLs contenant les secrets de partage dans les
+      # journaux d'accès ni les traces de ce routeur, même si activés globalement.
+      observability:
+        accessLogs: false
+        tracing: false
+      middlewares:
+        - pixelotheque-slash
+        - pixelotheque-prefix
+        - pixelotheque-https
+  middlewares:
+    pixelotheque-slash:
+      redirectRegex:
+        regex: "^(https?://[^/]+/ma-pixelotheque)$"
+        replacement: "${1}/"
+        permanent: true
+    pixelotheque-prefix:
+      stripPrefix:
+        prefixes: [/ma-pixelotheque]
+    pixelotheque-https:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+  services:
+    pixelotheque:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: http://pixelotheque-web:8000
+
+# Le conteneur Traefik doit partager le réseau du backend et son alias unique.
+# Ce fichier n'est pas un override Compose : ne pas lui passer docker compose.

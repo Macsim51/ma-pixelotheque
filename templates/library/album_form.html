@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{% if is_creation %}Créer un album{% else %}Modifier l’album{% endif %} · Ma Pixelothèque{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title">
+  <a class="back-link" href="{% if is_creation %}{% url 'library:album_list' %}{% else %}{% url 'library:album_detail' album.pk %}{% endif %}">← Retour</a>
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Organiser vos souvenirs</p>
+      <h1 id="page-title">{% if is_creation %}Créer un album{% else %}Modifier l’album{% endif %}</h1>
+    </div>
+  </header>
+  <form method="post" class="card form-card">
+    {% csrf_token %}
+    {% if form.errors %}<div class="form-error" role="alert">Vérifiez les champs indiqués ci-dessous.</div>{% endif %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+    <div class="form-field{% if field.errors %} has-error{% endif %}">
+      {{ field.label_tag }}
+      {{ field }}
+      {% if field.help_text %}<p class="help-text" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</p>{% endif %}
+      {{ field.errors }}
+    </div>
+    {% endfor %}
+    <div class="form-actions">
+      <button class="button button-primary" type="submit">{% if is_creation %}Créer l’album{% else %}Enregistrer{% endif %}</button>
+      <a class="button button-secondary" href="{% if is_creation %}{% url 'library:album_list' %}{% else %}{% url 'library:album_detail' album.pk %}{% endif %}">Annuler</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

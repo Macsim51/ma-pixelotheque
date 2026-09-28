@@ -1,0 +1,5 @@
+<form method="post" action="{% url 'library:favorite_toggle' media.pk %}" hx-post="{% url 'library:favorite_toggle' media.pk %}" hx-target="this" hx-swap="outerHTML" class="favorite-form">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ favorite_next }}">
+  <button type="submit" class="button button-secondary" aria-pressed="{% if media.is_favorite %}true{% else %}false{% endif %}">{% if media.is_favorite %}★ Retirer des favoris{% else %}☆ Ajouter aux favoris{% endif %}</button>
+</form>

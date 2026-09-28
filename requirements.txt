@@ -1,0 +1,8 @@
+# Versions vérifiées le 28 septembre 2026. Mises à jour par changement testé.
+Django==5.2.17
+gunicorn==26.2.0
+whitenoise==6.12.0
+Pillow==12.3.0
+# Dépendances Django sous Linux, figées pour des installations reproductibles.
+asgiref==3.12.1
+sqlparse==0.6.0

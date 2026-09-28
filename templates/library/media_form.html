@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Modifier une photo · Ma Pixelothèque{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title">
+  <a class="back-link" href="{% url 'library:media_detail' media.pk %}">← Retour à la photo</a>
+  <header class="page-header"><h1 id="page-title">Les informations de votre photo</h1></header>
+  <form method="post" class="card form-card">
+    {% csrf_token %}{{ form.non_field_errors }}
+    {% for field in form %}<div class="form-field">{{ field.label_tag }}{{ field }}{% if field.help_text %}<p class="help-text" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</p>{% endif %}{{ field.errors }}</div>{% endfor %}
+    <div class="form-actions"><button type="submit" class="button button-primary">Enregistrer</button><a class="button button-secondary" href="{% url 'library:media_detail' media.pk %}">Annuler</a></div>
+  </form>
+</section>
+{% endblock %}

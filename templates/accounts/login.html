@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Connexion · Ma Pixelothèque{% endblock %}
+{% block content %}
+<section class="auth-card panel" aria-labelledby="login-heading">
+  <h1 id="login-heading">Bienvenue dans votre Pixelothèque</h1>
+  <p class="muted">Connectez-vous pour retrouver vos albums et vos souvenirs.</p>
+  <form method="post" action="{% url 'accounts:login' %}" class="stack">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    {% for field in form %}
+      <div class="form-field">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.errors %}<div class="form-errors" role="alert">{{ field.errors }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    <button type="submit" class="button button-primary">Se connecter</button>
+  </form>
+  <p class="muted">Besoin d’un compte ou d’un nouveau mot de passe ? Contactez l’administrateur de votre famille.</p>
+</section>
+{% endblock %}

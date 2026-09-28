@@ -1,0 +1,23 @@
+{% extends "sharing/base.html" %}
+{% block title %}{{ photo.title|default:'Photo' }} · {{ share.album.title }}{% endblock %}
+{% block content %}
+<a class="back-link" href="{% url 'sharing:album' token=token %}">← {{ share.album.title }}</a>
+<article class="photo-detail">
+  <div class="photo-viewer">
+    {% if photo.preview_key %}<img src="{% url 'sharing:file' token=token media_id=photo.pk variant='preview' %}" alt="{{ photo.title|default:'Photo de l’album' }}">
+    {% else %}<p class="empty-state">L’aperçu de cette photo est en préparation.</p>{% endif %}
+  </div>
+  <div class="photo-metadata">
+    <h1>{{ photo.title|default:'Photo' }}</h1>
+    <p class="muted">{{ photo.sort_date|date:"j F Y" }}</p>
+    {% if photo.description %}<p>{{ photo.description|linebreaksbr }}</p>{% endif %}
+    {% if photo.tags.all %}<ul class="tag-list" aria-label="Mots-clés">{% for tag in photo.tags.all %}<li>{{ tag.name }}</li>{% endfor %}</ul>{% endif %}
+    {% if share.allow_download %}<a class="button" href="{% url 'sharing:file' token=token media_id=photo.pk variant='original' %}">Télécharger l’original</a>{% endif %}
+  </div>
+</article>
+<nav class="pagination" aria-label="Photos de l’album">
+  {% if previous_photo %}<a class="button" href="{% url 'sharing:photo' token=token media_id=previous_photo.pk %}">← Photo précédente</a>{% endif %}
+  <a href="{% url 'sharing:album' token=token %}">Voir l’album</a>
+  {% if next_photo %}<a class="button" href="{% url 'sharing:photo' token=token media_id=next_photo.pk %}">Photo suivante →</a>{% endif %}
+</nav>
+{% endblock %}

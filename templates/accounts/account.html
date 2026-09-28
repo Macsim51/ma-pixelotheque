@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Mon compte · Ma Pixelothèque{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Mon compte</h1>
+  <p class="muted">{{ request.user.username }}</p>
+</div>
+{% if action_error %}<p class="form-errors" role="alert">{{ action_error }}</p>{% endif %}
+<div class="settings-grid">
+  <section class="panel" aria-labelledby="preferences-heading">
+    <h2 id="preferences-heading">Apparence</h2>
+    <form method="post" class="stack">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="preferences">
+      {{ preferences_form.as_p }}
+      <button type="submit" class="button button-primary">Enregistrer</button>
+    </form>
+  </section>
+  <section class="panel" aria-labelledby="password-heading">
+    <h2 id="password-heading">Mot de passe</h2>
+    <form method="post" class="stack">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="password">
+      {{ password_form.as_p }}
+      <button type="submit" class="button">Modifier mon mot de passe</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

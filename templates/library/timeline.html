@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} · Ma Pixelothèque{% endblock %}
+{% block content %}
+<section aria-labelledby="page-title">
+  {% if period_start %}<a class="back-link" href="{% url 'library:timeline' %}">← Toutes les photos</a>{% endif %}
+  <header class="page-header">
+    <div><p class="eyebrow">Au fil des souvenirs</p><h1 id="page-title">{{ page_title }}</h1>
+      {% if representative %}<p class="muted">Une sélection de cette période. Ouvrez une photo ou explorez une date pour en voir davantage.</p>{% endif %}
+    </div>
+    <div class="page-actions">{% if representative %}<a class="button button-secondary" href="?all=1">Toutes les photos de cette période</a>{% endif %}<a class="button button-primary" href="{% url 'processing:upload' %}">Ajouter des photos</a></div>
+  </header>
+  {% if period_start %}<nav class="period-nav" aria-label="Période"><a href="{% url 'library:timeline_year' period_year %}">{{ period_year }}</a>{% if period_month %}<a href="{% url 'library:timeline_month' period_year period_month %}">{{ period_start|date:"F" }}</a>{% endif %}</nav>{% endif %}
+  {% include "library/_media_grid.html" %}
+  {% include "library/_media_pagination.html" %}
+</section>
+{% endblock %}

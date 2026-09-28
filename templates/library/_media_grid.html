@@ -1,0 +1,25 @@
+{% if media_items %}
+<div class="photo-grid">
+  {% for media in media_items %}
+  <article class="photo-card">
+    <a class="photo-link" href="{% url 'library:media_detail' media.pk %}?{{ navigation_query }}">
+      {% if media.status == 'ready' and media.thumbnail_key %}
+      <img src="{% url 'library:media_file' media.pk 'thumbnail' %}" alt="{{ media.title|default:media.original_name }}" loading="lazy" decoding="async" width="{{ media.width|default:480 }}" height="{{ media.height|default:480 }}">
+      {% else %}
+      <span class="photo-placeholder"><span aria-hidden="true">▧</span><span>{% if media.status == 'ready' %}Aperçu indisponible{% else %}{{ media.get_status_display }}{% endif %}</span></span>
+      {% endif %}
+      <span class="photo-caption">{{ media.title|default:media.original_name }}</span>
+    </a>
+    {% if is_timeline %}
+    <div class="photo-date-links" aria-label="Explorer cette période">
+      <a href="{% url 'library:timeline_year' media.sort_date|date:'Y' %}">{{ media.sort_date|date:"Y" }}</a>
+      <a href="{% url 'library:timeline_month' media.sort_date|date:'Y' media.sort_date|date:'n' %}">{{ media.sort_date|date:"F" }}</a>
+      <a href="{% url 'library:timeline_day' media.sort_date|date:'Y' media.sort_date|date:'n' media.sort_date|date:'j' %}">{{ media.sort_date|date:"j" }}</a>
+    </div>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state card"><span class="empty-state-icon" aria-hidden="true">▧</span><h2>Aucune photo à afficher</h2><p>Les photos disponibles dans cet espace apparaîtront ici.</p></div>
+{% endif %}

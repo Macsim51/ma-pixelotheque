@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Albums · Ma Pixelothèque{% endblock %}
+{% block content %}
+<section aria-labelledby="page-title">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Vos souvenirs, ensemble</p>
+      <h1 id="page-title">Albums</h1>
+      <p class="muted">Un espace pour chaque moment qui compte.</p>
+    </div>
+    {% if can_create_album %}<a class="button button-primary" href="{% url 'library:album_create' %}">Créer un album</a>{% endif %}
+  </header>
+
+  {% if page_obj %}
+  <div class="album-grid">
+    {% for album in page_obj %}
+    <article class="album-card card">
+      <a href="{% url 'library:album_detail' album.pk %}" class="album-card-link">
+        {% if album.cover_id %}<div class="album-cover"><img src="{% url 'library:media_file' album.cover_id 'thumbnail' %}" alt="" loading="lazy" decoding="async" width="480" height="320"></div>{% else %}<div class="album-cover album-cover-empty" aria-hidden="true"><span>▧</span></div>{% endif %}
+        <div class="album-card-body">
+          <span class="badge">{{ album.get_visibility_display }}</span>
+          <h2>{{ album.title }}</h2>
+          {% if album.description %}<p>{{ album.description|truncatechars:120 }}</p>{% endif %}
+          <p class="muted">Créé par {{ album.owner.username }}</p>
+          <p class="muted">{{ album.media_count }} photo{{ album.media_count|pluralize }}</p>
+        </div>
+      </a>
+    </article>
+    {% endfor %}
+  </div>
+  {% if page_obj.has_other_pages %}
+  <nav class="pagination" aria-label="Pages d’albums">
+    {% if page_obj.has_previous %}<a class="button button-secondary" href="?page={{ page_obj.previous_page_number }}" rel="prev">Précédente</a>{% endif %}
+    <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="button button-secondary" href="?page={{ page_obj.next_page_number }}" rel="next">Suivante</a>{% endif %}
+  </nav>
+  {% endif %}
+  {% else %}
+  <div class="empty-state card">
+    <span class="empty-state-icon" aria-hidden="true">▧</span>
+    <h2>Aucun album pour le moment</h2>
+    {% if can_create_album %}
+    <p>Créez un album pour commencer à rassembler vos souvenirs.</p>
+    <a class="button button-primary" href="{% url 'library:album_create' %}">Créer mon premier album</a>
+    {% else %}
+    <p>Les albums partagés avec vous apparaîtront ici.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

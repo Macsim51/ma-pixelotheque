@@ -1,0 +1,17 @@
+# Caddy 2.8+ : log_skip portait le nom skip_log avant cette version.
+# Exemple : le DNS public doit viser le serveur pour obtenir un certificat.
+photos.example.org {
+    # Matcher évalué avant handle_path, donc avec le préfixe public présent.
+    # S'applique également si la journalisation d'accès est activée sur ce site.
+    log_skip /ma-pixelotheque/s/*
+    redir /ma-pixelotheque /ma-pixelotheque/ 308
+
+    handle_path /ma-pixelotheque/* {
+        reverse_proxy 127.0.0.1:8000 {
+            header_up X-Forwarded-Proto https
+        }
+    }
+}
+
+# Caddy dans Docker : utiliser pixelotheque-web:8000 sur le réseau partagé.
+# Cette règle ne filtre pas les journaux d'erreur runtime : voir README.
