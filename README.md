@@ -10,6 +10,8 @@ Une photothèque familiale auto-hébergée, pensée pour un Raspberry Pi 5 de 4 
 
 - Upload multiple JPEG, PNG et WebP, vers un album existant ou créé à cette occasion. Originaux conservés intacts, extraction EXIF et miniatures en arrière-plan.
 - Albums familiaux, privés ou restreints, classement d’une photo dans plusieurs albums ; comptes famille, invité et administrateur, sans inscription publique.
+- Albums et sous-albums sur plusieurs niveaux, fil d’Ariane et rangement de plusieurs albums existants dans un album parent.
+- Vignette personnalisable parmi les photos d’un album et de ses sous-albums ; choix automatique d’une photo pour les albums parents.
 - Timeline par année, mois et jour, pagination, chargement différé et sélection stable dans les périodes denses.
 - Carte Leaflet avec groupes géographiques, recherche par texte et filtres, favoris personnels, détail photo avec navigation et modification des informations.
 - Liens de partage aléatoires limités à un album, désactivables, révocables et avec expiration optionnelle. Les familles peuvent partager leurs propres albums selon le réglage admin.
@@ -53,6 +55,12 @@ Les limites Docker doivent être supportées par le noyau hôte. Voir les [limit
 ## Première utilisation
 
 Créer les comptes dans l’administration avancée, choisir le rôle **Famille**, puis se connecter avec l’un de ces comptes. Créer un album ou utiliser **Ajouter des photos**. Les photos reçues apparaissent en attente pendant que le worker extrait les informations et prépare les aperçus. Les invités doivent être ajoutés explicitement aux albums autorisés.
+
+Pour regrouper des visites de zoos, créer un album **Zoo**, l’ouvrir puis choisir **Ranger des albums existants** et sélectionner les albums concernés. **Créer un sous-album** permet d’en ajouter directement à cet emplacement. Dans **Modifier l’album**, le champ **Album parent** permet de le déplacer ; choisir **Aucun** le remet au premier niveau. Un album peut contenir à la fois des photos et des sous-albums.
+
+Le classement ne change pas les droits : chaque sous-album garde sa visibilité, ses membres et ses liens de partage. Un lien de partage reste limité aux photos directement dans son album. Si le parent n’est pas accessible à un utilisateur, ses sous-albums autorisés restent visibles au premier niveau. Supprimer un parent dans l’administration remet ses sous-albums au premier niveau sans supprimer leurs photos.
+
+**Choisir la vignette**, sur la page d’un album ou depuis **Modifier l’album**, ouvre une galerie des photos de cet album et de ses sous-albums accessibles, sur tous les niveaux. Cliquez sur une photo pour la choisir, ou sur **Revenir au choix automatique** pour utiliser la plus récente disponible. Seules les photos disposant d’un aperçu sont proposées. Si la photo choisie est déplacée ou inaccessible à une personne, une vignette automatique autorisée la remplace pour cette personne. Les fichiers photo ne sont pas modifiés.
 
 Le propriétaire d’un album ouvre **Partager** pour créer un lien. Son adresse n’est affichée qu’une fois : seule son empreinte est conservée. Désactiver le partage familial dans les réglages retire la gestion des liens aux familles, sans révoquer les liens existants ; ceux-ci restent gérables par l’admin.
 

@@ -1,6 +1,6 @@
 # Ma Pixelothèque — architecture implémentée
 
-État du code au 28 septembre 2026. Ce document décrit les composants présents et leurs limites ; les résultats de tests et la mise en service sont rapportés séparément. Les commandes d’exploitation figurent dans [deployment.md](deployment.md), [backup-restore.md](backup-restore.md) et [reverse-proxy/README.md](reverse-proxy/README.md).
+État du code au 29 septembre 2026. Ce document décrit les composants présents et leurs limites ; les résultats de tests et la mise en service sont rapportés séparément. Les commandes d’exploitation figurent dans [deployment.md](deployment.md), [backup-restore.md](backup-restore.md) et [reverse-proxy/README.md](reverse-proxy/README.md).
 
 ## 1. Architecture technique
 
@@ -62,7 +62,7 @@ Les bases, médias, secrets et sauvegardes restent hors du dépôt et du context
 | Modèle | Données essentielles |
 |---|---|
 | `User(AbstractUser)` | Rôle `family` ou `guest`, thème ; invité par défaut, administration par superutilisateur Django. |
-| `Album` | UUID, propriétaire, titre, description, visibilité `family/private/restricted`, contribution familiale et dates. |
+| `Album` | UUID, propriétaire, parent optionnel, photo de vignette optionnelle, titre, description, visibilité `family/private/restricted`, contribution familiale et dates. |
 | `AlbumPermission` | Album, utilisateur, droit de contribuer ; paire unique. |
 | `MediaItem` | UUID, uploader, type photo, titre, description, nom original, clés privées des fichiers, poids, SHA-256, états de validation/dérivés, dimensions, dates, appareil, GPS et EXIF sélectionné. |
 | `AlbumMedia` | Association album/photo, date d’ajout ; paire unique. |
@@ -106,6 +106,12 @@ Règles appliquées :
 
 Le formulaire de photo permet plusieurs albums. `Album.objects.uploadable_to(user)` limite les destinations à celles où l’acteur peut contribuer. Les associations existantes hors de ces droits restent inchangées, y compris celles d’albums cachés. Les permissions sont relues dans la transaction avant modification et une photo doit conserver au moins une association. Ajouter un album peut élargir l’audience ; l’interface le précise.
 
+Les albums ont un parent optionnel (`Album.parent`, relation vers lui-même avec `SET_NULL`). La liste principale affiche les albums sans parent accessible ; le détail présente les sous-albums directs et un fil d’Ariane limité aux ancêtres accessibles. Les photos et les sous-albums sont paginés indépendamment, respectivement par `page` et `albums_page`. Les compteurs de sous-albums sont filtrés par les permissions dans SQL, sans requête par carte.
+
+Créer ou déplacer un sous-album exige la gestion de l’album destination ; déplacer un album existant exige aussi la gestion de celui-ci. Le formulaire de rangement déplace plusieurs albums dans une transaction. Les sauvegardes valident l’absence de cycle et relisent les permissions, y compris après validation du formulaire. La base interdit aussi qu’un album soit son propre parent. Les mises à jour directes de `parent` par `QuerySet.update()`/`bulk_update()` doivent être évitées : elles contournent la validation des cycles indirects.
+
+Le classement n’hérite d’aucun droit ni lien de partage. Chaque sous-album conserve son audience ; un album autorisé dont le parent est caché reste accessible au premier niveau. Les liens publics restent limités aux photos directement associées à leur album. Les suppressions de parents remettent leurs enfants directs au premier niveau sans supprimer leurs photos.
+
 La suppression d’un album est refusée si elle retire la dernière association d’une photo, y compris pour une suppression ORM groupée. La suppression groupée d’albums dans Django Admin et la suppression brute de photos y sont désactivées. Un service de suppression définitive coordonnant base et fichiers n’est pas encore livré.
 
 ## 5. Routes et parcours
@@ -117,7 +123,9 @@ Les routes sont relatives au préfixe configuré : avec `APP_BASE_PATH=/ma-pixel
 | `/` | Timeline pour famille/admin, albums pour les invités. |
 | `/accounts/login/`, `/accounts/logout/`, `/accounts/account/` | Connexion, déconnexion par POST, mot de passe et préférences. |
 | `/albums/`, `/albums/new/` | Liste paginée et création. |
-| `/albums/<uuid>/`, `/albums/<uuid>/edit/` | Photos et gestion de l’album. |
+| `/albums/<uuid>/`, `/albums/<uuid>/edit/` | Sous-albums, photos et gestion de l’album. |
+| `/albums/<uuid>/group/` | Rangement d’albums existants dans un album parent. |
+| `/albums/<uuid>/cover/` | Galerie paginée, choix de vignette par POST et retour au mode automatique. |
 | `/upload/` | Upload multiple, choix ou création d’album. |
 | `/photos/` | Timeline paginée. |
 | `/photos/year/<année>/` | Sélection annuelle. |
@@ -148,7 +156,11 @@ Les sélections de période sont déterministes :
 
 Chaque intervalle prend la première photo selon `(date, UUID)` dans le périmètre autorisé. Il n’y a ni tri aléatoire complet ni chargement global. La sélection reste stable tant que dates, photos et droits ne changent pas ; elle représente la répartition temporelle, pas une évaluation esthétique. Une vue de synthèse effectue au plus une requête par intervalle. Les miniatures préproduites sont chargées à la demande par le navigateur.
 
-Les couvertures et nombres d’images des albums sont calculés par sous-requêtes autorisées, sans requête distincte par carte. Une couverture exige une photo validée et une miniature disponible.
+Les nombres d’images sont calculés par sous-requêtes autorisées. `AlbumCovers` charge la structure des albums visibles et, par sous-requêtes, seulement l’UUID et la date de la dernière photo prête avec miniature de chaque album. Il calcule ensuite les vignettes des cartes paginées sans requête par carte ni chargement de toutes les photos. La traversée s’arrête aux albums inaccessibles. Le mode automatique choisit la plus récente photo de toute la branche accessible, avec l’UUID comme départage déterministe ; le choix manuel d’un sous-album ne change pas le choix automatique de son parent.
+
+`Album.cover_photo` conserve le choix manuel (`SET_NULL` si la photo est supprimée). La galerie propose les photos prêtes avec miniature de la branche accessible, dédupliquées par `EXISTS`, par pages de 48 et avec recherche titre/nom. Le formulaire vérifie la gestion de l’album et relit droits, arborescence, appartenance et état de la photo dans la transaction de sauvegarde. La référence n’est pas éditable via un champ brut de Django Admin ; celui-ci renvoie à la galerie. La modification générale de l’album préserve les choix de vignette effectués entre-temps.
+
+Le choix manuel n’accorde aucun droit de lecture supplémentaire : son appartenance à la branche visible est revérifiée lors de chaque affichage, en une requête groupée pour toutes les cartes. Une photo inaccessible, déplacée hors de la branche, sans miniature ou non prête laisse place à une vignette automatique autorisée. Les liens de partage gardent leur périmètre d’origine et les fichiers source ne changent pas.
 
 **Recherche.** Titre, description, nom d’un album visible et tags, puis filtres de dates, uploader, appareil, GPS et favoris. Les tags sont normalisés Unicode. Titres et descriptions utilisent les opérateurs textuels ordinaires de SQLite : pas d’analyse linguistique complète des accents ou de la casse Unicode. Une recherche contenant un mot peut parcourir de nombreuses lignes malgré les index des autres filtres. FTS5 reste une évolution non livrée.
 

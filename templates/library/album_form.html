@@ -1,14 +1,18 @@
 {% extends "base.html" %}
-{% block title %}{% if is_creation %}Créer un album{% else %}Modifier l’album{% endif %} · Ma Pixelothèque{% endblock %}
+{% block title %}{% if creation_parent %}Créer un sous-album{% elif is_creation %}Créer un album{% else %}Modifier l’album{% endif %} · Ma Pixelothèque{% endblock %}
 {% block content %}
 <section class="form-page" aria-labelledby="page-title">
-  <a class="back-link" href="{% if is_creation %}{% url 'library:album_list' %}{% else %}{% url 'library:album_detail' album.pk %}{% endif %}">← Retour</a>
+  <a class="back-link" href="{% if creation_parent %}{% url 'library:album_detail' creation_parent.pk %}{% elif is_creation %}{% url 'library:album_list' %}{% else %}{% url 'library:album_detail' album.pk %}{% endif %}">← Retour</a>
   <header class="page-header">
     <div>
       <p class="eyebrow">Organiser vos souvenirs</p>
-      <h1 id="page-title">{% if is_creation %}Créer un album{% else %}Modifier l’album{% endif %}</h1>
+      <h1 id="page-title">{% if creation_parent %}Créer un sous-album{% elif is_creation %}Créer un album{% else %}Modifier l’album{% endif %}</h1>
+      {% if creation_parent %}<p class="muted">Dans l’album « {{ creation_parent.title }} ».</p>{% endif %}
     </div>
   </header>
+  {% if not is_creation %}
+  <p class="album-description"><a href="{% url 'library:album_cover' album.pk %}">Choisir la vignette de cet album</a> parmi ses photos et celles de ses sous-albums.</p>
+  {% endif %}
   <form method="post" class="card form-card">
     {% csrf_token %}
     {% if form.errors %}<div class="form-error" role="alert">Vérifiez les champs indiqués ci-dessous.</div>{% endif %}
@@ -23,7 +27,7 @@
     {% endfor %}
     <div class="form-actions">
       <button class="button button-primary" type="submit">{% if is_creation %}Créer l’album{% else %}Enregistrer{% endif %}</button>
-      <a class="button button-secondary" href="{% if is_creation %}{% url 'library:album_list' %}{% else %}{% url 'library:album_detail' album.pk %}{% endif %}">Annuler</a>
+      <a class="button button-secondary" href="{% if creation_parent %}{% url 'library:album_detail' creation_parent.pk %}{% elif is_creation %}{% url 'library:album_list' %}{% else %}{% url 'library:album_detail' album.pk %}{% endif %}">Annuler</a>
     </div>
   </form>
 </section>

@@ -1,0 +1,22 @@
+<div class="album-grid">
+  {% for album in albums %}
+  <article class="album-card card">
+    <a href="{% url 'library:album_detail' album.pk %}" class="album-card-link">
+      {% if album.cover_id %}
+      <div class="album-cover"><img src="{% url 'library:media_file' album.cover_id 'thumbnail' %}" alt="" loading="lazy" decoding="async" width="480" height="320"></div>
+      {% elif album.child_count %}
+      <div class="album-cover album-cover-folder" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M3 9h18"/></svg></div>
+      {% else %}
+      <div class="album-cover album-cover-empty" aria-hidden="true"><span>▧</span></div>
+      {% endif %}
+      <div class="album-card-body">
+        <span class="badge">{{ album.get_visibility_display }}</span>
+        <h2>{{ album.title }}</h2>
+        {% if album.description %}<p>{{ album.description|truncatechars:120 }}</p>{% endif %}
+        <p class="muted">Créé par {{ album.owner.username }}</p>
+        <p class="muted">{% if album.child_count %}{{ album.child_count }} sous-album{{ album.child_count|pluralize }}{% endif %}{% if album.child_count and album.media_count %} · {% endif %}{% if album.media_count or not album.child_count %}{{ album.media_count }} photo{{ album.media_count|pluralize }}{% endif %}</p>
+      </div>
+    </a>
+  </article>
+  {% endfor %}
+</div>

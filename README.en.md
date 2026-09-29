@@ -11,6 +11,8 @@ SQLite. No Node.js or frontend build pipeline.
 Initial photo MVP. Features include multiple JPEG/PNG/WebP uploads,
 background EXIF extraction and thumbnails, family/private/restricted albums,
 assigning a photo to multiple albums,
+nesting albums with breadcrumbs and moving existing albums into a parent,
+custom album thumbnails selected from the album or its subalbums,
 a paginated timeline, geographic clusters on a Leaflet map, search, personal
 favorites, metadata editing and revocable private album links. The interface
 supports light, dark and system themes and is currently in French.

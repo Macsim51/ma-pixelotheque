@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 
+from .covers import AlbumCovers
 from .models import Album, AlbumPermission, MediaItem, Tag
 from .permissions import can_create_album, can_manage_album, can_edit_media
 
@@ -13,7 +14,31 @@ class UsernameMultipleChoiceField(forms.ModelMultipleChoiceField):
         return user.get_username()
 
 
+class AlbumParentChoiceField(forms.ModelChoiceField):
+    retained_parent_id = None
+
+    def to_python(self, value):
+        # A parent assigned by an admin can be inaccessible to the album's owner.
+        # Keep it without putting its name or ID in the form, or allow moving out.
+        if value == "__keep__" and self.retained_parent_id is not None:
+            try:
+                return Album.objects.get(pk=self.retained_parent_id)
+            except Album.DoesNotExist:
+                raise forms.ValidationError("L’emplacement a changé. Rechargez la page.") from None
+        return super().to_python(value)
+
+
 class AlbumForm(forms.ModelForm):
+    parent = AlbumParentChoiceField(
+        label="Album parent",
+        queryset=Album.objects.none(),
+        required=False,
+        empty_label="Aucun — afficher dans tous les albums",
+        help_text=(
+            "Choisissez un album que vous gérez pour y ranger cet album, par exemple « Zoo ». "
+            "Chaque album conserve sa visibilité et ses membres : les accès ne sont pas hérités."
+        ),
+    )
     allowed_users = UsernameMultipleChoiceField(
         label="Membres autorisés",
         queryset=get_user_model().objects.none(),
@@ -41,6 +66,7 @@ class AlbumForm(forms.ModelForm):
         fields = (
             "title",
             "description",
+            "parent",
             "visibility",
             "allow_family_uploads",
             "allowed_users",
@@ -71,6 +97,18 @@ class AlbumForm(forms.ModelForm):
             self.instance.owner = user
         elif not can_manage_album(user, self.instance):
             raise PermissionDenied
+
+        parents = Album.objects.manageable_by(user).order_by("title", "id")
+        if not self.instance._state.adding:
+            parents = parents.exclude(pk__in={self.instance.pk} | self.instance.descendant_ids())
+        parent_field = self.fields["parent"]
+        parent_field.queryset = parents
+        if self.instance.parent_id and not parents.filter(pk=self.instance.parent_id).exists():
+            parent_field.retained_parent_id = self.instance.parent_id
+            parent_field.choices = [
+                *parent_field.choices, ("__keep__", "Conserver l’emplacement actuel"),
+            ]
+            self.initial["parent"] = "__keep__"
 
         candidates = (
             get_user_model().objects.filter(is_active=True)
@@ -126,13 +164,104 @@ class AlbumForm(forms.ModelForm):
             if not can_create_album(self.actor):
                 raise PermissionDenied
             self.instance.owner = self.actor
+            previous_parent_id = None
         else:
             current = Album.objects.get(pk=self.instance.pk)
             if not can_manage_album(self.actor, current):
                 raise PermissionDenied
             # The owner is immutable through this form, including crafted requests.
             self.instance.owner_id = current.owner_id
+            # Covers are edited separately; do not overwrite a more recent choice.
+            self.instance.cover_photo_id = current.cover_photo_id
+            previous_parent_id = current.parent_id
+        if self.instance.parent_id and self.instance.parent_id != previous_parent_id:
+            if not Album.objects.manageable_by(self.actor).filter(pk=self.instance.parent_id).exists():
+                raise PermissionDenied
+        self.instance.validate_parent()
         return super().save(commit=commit)
+
+
+class AlbumCoverForm(forms.Form):
+    cover_photo = forms.ModelChoiceField(
+        label="Photo de vignette", queryset=MediaItem.objects.none(), required=False,
+        error_messages={"invalid_choice": "Choisissez une photo disponible dans cet album ou ses sous-albums."},
+    )
+
+    def __init__(self, *args, user, album, covers=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not can_manage_album(user, album):
+            raise PermissionDenied
+        self.actor = user
+        self.album = album
+        self.fields["cover_photo"].queryset = (covers or AlbumCovers(user)).photos_for(album.pk)
+
+    @transaction.atomic
+    def save(self):
+        current = Album.objects.get(pk=self.album.pk)
+        if not can_manage_album(self.actor, current):
+            raise PermissionDenied
+        photo = self.cleaned_data["cover_photo"]
+        if photo is not None and not AlbumCovers(self.actor).photos_for(current.pk).filter(pk=photo.pk).exists():
+            raise forms.ValidationError({"cover_photo": "Cette photo n’est plus disponible dans cet album. Choisissez-en une autre."})
+        current.cover_photo = photo
+        current.save(update_fields=["cover_photo", "updated_at"])
+        return current
+
+
+class AlbumGroupingForm(forms.Form):
+    albums = forms.ModelMultipleChoiceField(
+        label="Albums à ranger ici",
+        queryset=Album.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        help_text=(
+            "Les albums sélectionnés seront déplacés ici, avec leurs sous-albums. "
+            "Leurs photos, leur visibilité et leurs membres restent inchangés."
+        ),
+    )
+
+    def __init__(self, *args, user, album, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not can_manage_album(user, album):
+            raise PermissionDenied
+        self.actor = user
+        self.album = album
+        excluded = {album.pk}
+        parent_id = album.parent_id
+        while parent_id is not None and parent_id not in excluded:
+            excluded.add(parent_id)
+            parent_id = Album.objects.filter(pk=parent_id).values_list("parent_id", flat=True).first()
+        self.fields["albums"].queryset = (
+            Album.objects.manageable_by(user).exclude(pk__in=excluded)
+            .exclude(parent=album).order_by("title", "id")
+        )
+
+    @transaction.atomic
+    def save(self):
+        target = Album.objects.get(pk=self.album.pk)
+        if not can_manage_album(self.actor, target):
+            raise PermissionDenied
+        selected_ids = {album.pk for album in self.cleaned_data["albums"]}
+        albums = list(Album.objects.manageable_by(self.actor).filter(pk__in=selected_ids))
+        if len(albums) != len(selected_ids):
+            raise PermissionDenied
+        # Selecting both an album and one of its descendants moves the entire
+        # branch once, keeping its internal organization intact.
+        parents = dict(Album.objects.values_list("pk", "parent_id"))
+        roots = []
+        for album in albums:
+            parent_id = parents.get(album.pk)
+            seen = {album.pk}
+            while parent_id is not None and parent_id not in seen:
+                if parent_id in selected_ids:
+                    break
+                seen.add(parent_id)
+                parent_id = parents.get(parent_id)
+            else:
+                roots.append(album)
+        for album in roots:
+            album.parent = target
+            album.save(update_fields=["parent", "updated_at"])
+        return len(roots)
 
 
 class MediaItemForm(forms.ModelForm):

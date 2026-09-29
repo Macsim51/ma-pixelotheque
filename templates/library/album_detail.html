@@ -2,7 +2,13 @@
 {% block title %}{{ album.title }} · Ma Pixelothèque{% endblock %}
 {% block content %}
 <section aria-labelledby="page-title">
-  <a class="back-link" href="{% url 'library:album_list' %}">← Tous les albums</a>
+  <nav class="album-breadcrumbs" aria-label="Fil d’Ariane">
+    <ol>
+      <li><a href="{% url 'library:album_list' %}">Tous les albums</a></li>
+      {% for ancestor in ancestors %}<li><a href="{% url 'library:album_detail' ancestor.pk %}">{{ ancestor.title }}</a></li>{% endfor %}
+      <li><span aria-current="page">{{ album.title }}</span></li>
+    </ol>
+  </nav>
   <header class="page-header">
     <div>
       <span class="badge">{{ album.get_visibility_display }}</span>
@@ -12,11 +18,32 @@
     <div class="page-actions">
       {% if can_upload_album %}<a class="button button-primary" href="{% url 'processing:upload' %}?album={{ album.pk }}">Ajouter des photos</a>{% endif %}
       {% if can_manage_album %}<a class="button button-secondary" href="{% url 'library:album_edit' album.pk %}">Modifier l’album</a>{% endif %}
+      {% if can_manage_album %}<a class="button button-secondary" href="{% url 'library:album_cover' album.pk %}">Choisir la vignette</a>{% endif %}
       {% if can_share_album %}<a class="button button-secondary" href="{% url 'sharing:manage' album_id=album.pk %}">Partager l’album</a>{% endif %}
     </div>
   </header>
   {% if album.description %}<div class="album-description">{{ album.description|linebreaks }}</div>{% endif %}
+  {% if subalbums_page or can_manage_album %}
+  <section class="album-section" aria-labelledby="subalbums-title">
+    <header class="page-header album-section-header">
+      <h2 id="subalbums-title">Sous-albums{% if subalbums_page %} <span class="muted">({{ subalbums_page.paginator.count }})</span>{% endif %}</h2>
+      {% if can_manage_album %}
+      <div class="page-actions">
+        <a class="button button-secondary" href="{% url 'library:album_create' %}?parent={{ album.pk }}">Créer un sous-album</a>
+        <a class="button button-secondary" href="{% url 'library:album_group' album.pk %}">Ranger des albums existants</a>
+      </div>
+      {% endif %}
+    </header>
+    {% if subalbums_page %}
+    {% include "library/_album_grid.html" with albums=subalbums_page %}
+    {% include "library/_album_pagination.html" with albums_page=subalbums_page album_page_parameter="albums_page" %}
+    {% else %}<p class="muted">Regroupez ici vos albums par thème, par lieu ou par voyage.</p>{% endif %}
+  </section>
+  {% endif %}
+  {% if media_items or not subalbums_page %}
+  {% if subalbums_page or can_manage_album %}<h2>Photos de cet album</h2>{% endif %}
   {% include "library/_media_grid.html" %}
   {% include "library/_media_pagination.html" %}
+  {% endif %}
 </section>
 {% endblock %}

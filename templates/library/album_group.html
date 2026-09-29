@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Ranger des albums · Ma Pixelothèque{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title">
+  <a class="back-link" href="{% url 'library:album_detail' album.pk %}">← Retour à {{ album.title }}</a>
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Organiser vos souvenirs</p>
+      <h1 id="page-title">Ranger des albums existants</h1>
+      <p class="muted">Dans l’album « {{ album.title }} ».</p>
+    </div>
+  </header>
+  <form method="post" class="card form-card">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="form-field{% if form.albums.errors %} has-error{% endif %}">
+      {{ form.albums.label_tag }}
+      <p class="help-text" id="{{ form.albums.auto_id }}_helptext">{{ form.albums.help_text }}</p>
+      {% if form.albums.field.queryset %}{{ form.albums }}{% else %}<p>Aucun autre album à ranger ici. Vous pouvez créer un sous-album depuis la page précédente.</p>{% endif %}
+      {{ form.albums.errors }}
+    </div>
+    <div class="form-actions">
+      {% if form.albums.field.queryset %}<button class="button button-primary" type="submit">Ranger les albums sélectionnés</button>{% endif %}
+      <a class="button button-secondary" href="{% url 'library:album_detail' album.pk %}">Annuler</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

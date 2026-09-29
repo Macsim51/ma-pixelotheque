@@ -120,7 +120,7 @@ class Page(HTMLParser):
         if tag == "form":
             self.current_form = {"action": attrs.get("action", ""), "fields": {}}
             self.forms.append(self.current_form)
-        elif tag in {"input", "select", "textarea"} and self.current_form is not None:
+        elif tag in {"input", "select", "textarea", "button"} and self.current_form is not None:
             if attrs.get("name"):
                 self.current_form["fields"][attrs["name"]] = attrs.get("value", "")
         if tag == "link" and attrs.get("rel") in {"stylesheet", "icon"}:
@@ -352,6 +352,77 @@ def check_photo_and_share(browser, album_path, env):
     require(anonymous.request(parsed.path)[0] == 404, "Un lien révoqué doit devenir indisponible immédiatement")
     require(anonymous.request(f"{parsed.path}files/{media_id}/thumbnail/")[0] == 404, "La révocation doit aussi interdire une miniature déjà visitée")
     print("Photos validées : upload multipart, inspect/render, original intact, WebP, favoris et partage révoqué.")
+    return media_id
+
+
+def check_album_hierarchy(browser, existing_path, media_id):
+    """Create, group and move albums through real CSRF-protected forms."""
+    create_path = PREFIX + "/albums/new/"
+    page, _ = browser.page(create_path)
+    csrf = page.form("title")["fields"]["csrfmiddlewaretoken"]
+    status, headers, _ = browser.request(create_path, {
+        "csrfmiddlewaretoken": csrf, "title": "Zoo HTTP", "visibility": "family",
+    })
+    parent_path = redirected(status, headers)
+    parent_id = parent_path.rstrip("/").rsplit("/", 1)[1]
+    child_create_path = create_path + "?parent=" + parent_id
+    page, _ = browser.page(child_create_path)
+    status, headers, _ = browser.request(child_create_path, {
+        "csrfmiddlewaretoken": page.form("title")["fields"]["csrfmiddlewaretoken"],
+        "title": "Zoo de Beauval HTTP", "visibility": "family", "parent": parent_id,
+    })
+    child_path = redirected(status, headers)
+    child_page, _ = browser.page(child_path)
+    require(parent_path in child_page.local_targets, "Le fil d’Ariane doit mener au parent")
+
+    group_path = parent_path + "group/"
+    page, _ = browser.page(group_path)
+    existing_id = existing_path.rstrip("/").rsplit("/", 1)[1]
+    status, headers, _ = browser.request(group_path, {
+        "csrfmiddlewaretoken": page.form("albums")["fields"]["csrfmiddlewaretoken"],
+        "albums": existing_id,
+    })
+    redirected(status, headers, parent_path)
+    parent_page, _ = browser.page(parent_path)
+    require(existing_path in parent_page.local_targets and child_path in parent_page.local_targets,
+            "Le parent doit présenter les albums créés et déplacés")
+    root_page, _ = browser.page(PREFIX + "/albums/")
+    require(parent_path in root_page.local_targets, "Le parent doit rester au premier niveau")
+    require(existing_path not in root_page.local_targets and child_path not in root_page.local_targets,
+            "Les sous-albums ne doivent plus encombrer le premier niveau")
+    require(f"{PREFIX}/files/{media_id}/thumbnail/" in root_page.local_targets,
+            "Le parent doit avoir une vignette automatique issue de son sous-album")
+
+    cover_path = parent_path + "cover/"
+    cover_page, body = browser.page(cover_path)
+    require(media_id.encode() in body, "La galerie de vignettes doit inclure les photos des sous-albums")
+    status, headers, _ = browser.request(cover_path, {
+        "csrfmiddlewaretoken": cover_page.form("cover_photo")["fields"]["csrfmiddlewaretoken"],
+        "cover_photo": media_id,
+    })
+    redirected(status, headers, parent_path)
+    cover_page, body = browser.page(cover_path)
+    require("Vignette personnalisée".encode() in body, "Le choix de vignette doit être conservé")
+    status, headers, _ = browser.request(cover_path, {
+        "csrfmiddlewaretoken": cover_page.form("cover_photo")["fields"]["csrfmiddlewaretoken"],
+        "cover_photo": "",
+    })
+    redirected(status, headers, parent_path)
+    _, body = browser.page(cover_path)
+    require("Vignette personnalisée".encode() not in body, "Le retour au mode automatique doit être conservé")
+    print("Vignettes validées : photo du sous-album, sélection et retour au mode automatique.")
+
+    edit_path = existing_path + "edit/"
+    page, _ = browser.page(edit_path)
+    status, headers, _ = browser.request(edit_path, {
+        "csrfmiddlewaretoken": page.form("title")["fields"]["csrfmiddlewaretoken"],
+        "title": "Album témoin HTTP", "visibility": "family", "parent": "",
+        "allow_family_uploads": "on",
+    })
+    redirected(status, headers, existing_path)
+    root_page, _ = browser.page(PREFIX + "/albums/")
+    require(existing_path in root_page.local_targets, "Un album déplacé à la racine doit y réapparaître")
+    print("Sous-albums validés : création, rangement, fil d’Ariane et retour au premier niveau.")
 
 
 def check_http(password, env):
@@ -382,7 +453,8 @@ def check_http(password, env):
     require(detail_path.startswith(PREFIX + "/albums/"), "Destination de l’album incorrecte")
     page, body = browser.page(detail_path)
     require("Album témoin HTTP".encode() in body, "L’album créé doit être visible après redirection")
-    check_photo_and_share(browser, detail_path, env)
+    media_id = check_photo_and_share(browser, detail_path, env)
+    check_album_hierarchy(browser, detail_path, media_id)
     status, _, _ = browser.request(PREFIX + "/admin/")
     require(status == 302, "Le compte famille ne doit pas accéder à l’administration")
     status, _, _ = browser.request(PREFIX + "/accounts/logout/")

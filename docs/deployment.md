@@ -130,6 +130,10 @@ sh scripts/compose.sh "$PIXEL_ENV" ps
 
 Le build ne modifie pas la base. Arrêter `web` **et** `worker` avant migration ; `stop` sans nom de service le fait pour tout le projet. Les migrations sont une action explicite, jamais exécutées simultanément au démarrage des services. Si une migration échoue, conserver les services arrêtés et examiner l’erreur. Revenir à une ancienne image ne revient pas automatiquement à un ancien schéma : utiliser une sauvegarde compatible lorsque nécessaire.
 
+Les sous-albums nécessitent la migration `library.0003_album_parent`. Elle conserve les albums, photos, membres et partages existants ; tous les albums existants restent au premier niveau jusqu’à leur rangement depuis l’interface. Reconstruire l’image et appliquer la migration avant de redémarrer les services avec ce code.
+
+Les vignettes personnalisées nécessitent ensuite `library.0004_album_cover_photo`. Les albums existants démarrent en mode automatique ; les albums parents peuvent alors afficher une photo de leurs sous-albums accessibles. Cette migration conserve le classement, les photos et leurs droits.
+
 La commande `manage.py createsuperuser` crée le premier administrateur ; les autres comptes se gèrent dans Django Admin. Pour réinitialiser un mot de passe sans le placer dans l’historique :
 
 ```bash

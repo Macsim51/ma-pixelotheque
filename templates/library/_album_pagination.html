@@ -1,0 +1,7 @@
+{% if albums_page.has_other_pages %}
+<nav class="pagination" aria-label="Pages d’albums">
+  {% if albums_page.has_previous %}<a class="button button-secondary" href="?{{ album_pagination_query }}{{ album_page_parameter|default:'page' }}={{ albums_page.previous_page_number }}" rel="prev">Précédente</a>{% endif %}
+  <span>Page {{ albums_page.number }} sur {{ albums_page.paginator.num_pages }}</span>
+  {% if albums_page.has_next %}<a class="button button-secondary" href="?{{ album_pagination_query }}{{ album_page_parameter|default:'page' }}={{ albums_page.next_page_number }}" rel="next">Suivante</a>{% endif %}
+</nav>
+{% endif %}

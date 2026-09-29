@@ -48,13 +48,19 @@ class AlbumPermissionInline(SuperuserOnlyAdminMixin, admin.TabularInline):
 
 @admin.register(Album)
 class AlbumAdmin(SuperuserOnlyAdminMixin, admin.ModelAdmin):
-    list_display = ("title", "owner", "visibility", "allow_family_uploads", "created_at")
+    list_display = ("title", "parent", "owner", "visibility", "allow_family_uploads", "created_at")
     list_filter = ("visibility", "allow_family_uploads")
     search_fields = ("title", "owner__username")
-    list_select_related = ("owner",)
+    list_select_related = ("owner", "parent")
     inlines = (AlbumPermissionInline,)
-    readonly_fields = ("id", "created_at", "updated_at")
+    readonly_fields = ("id", "created_at", "updated_at", "cover_management")
     actions = ("regenerate_selected",)
+
+    @admin.display(description="Vignette")
+    def cover_management(self, obj):
+        if obj is None or obj._state.adding:
+            return "Enregistrez l’album avant de choisir sa vignette."
+        return format_html('<a href="{}">Choisir la vignette</a>', reverse("library:album_cover", args=[obj.pk]))
 
     def get_actions(self, request):
         actions = super().get_actions(request)

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Choisir la vignette · {{ album.title }}{% endblock %}
+{% block content %}
+<section aria-labelledby="page-title">
+  <a class="back-link" href="{% url 'library:album_detail' album.pk %}">← Retour à {{ album.title }}</a>
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Personnaliser vos albums</p>
+      <h1 id="page-title">Choisir la vignette</h1>
+      <p class="muted">Pour l’album « {{ album.title }} ». Cliquez sur une photo pour l’utiliser.</p>
+    </div>
+  </header>
+  {% if form.errors %}<div class="form-error" role="alert">{{ form.non_field_errors }}{{ form.cover_photo.errors }}</div>{% endif %}
+
+  <div class="card cover-settings">
+    {% if album.cover_id %}<img class="cover-current" src="{% url 'library:media_file' album.cover_id 'thumbnail' %}" alt="Vignette actuelle de l’album" width="144" height="100">{% endif %}
+    <div class="cover-summary">
+      <h2>{% if album.cover_is_custom %}Vignette personnalisée{% else %}Vignette automatique{% endif %}</h2>
+      <p class="muted">{% if album.cover_is_custom %}La photo choisie restera la vignette de cet album.{% else %}La photo la plus récente disponible dans cet album ou ses sous-albums.{% endif %}</p>
+      {% if album.cover_photo_id and not album.cover_is_custom %}<p class="help-text">La photo choisie n’est plus disponible ici. Une vignette automatique est utilisée.</p>{% endif %}
+    </div>
+    {% if album.cover_photo_id %}
+    <form method="post">
+      {% csrf_token %}
+      <button class="button button-secondary" type="submit" name="cover_photo" value="">Revenir au choix automatique</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <p class="muted">Les photos disponibles de cet album et de ses sous-albums sont proposées ici. Chaque personne ne voit que les photos auxquelles elle a accès.</p>
+  <form method="get" class="cover-search" role="search">
+    <div>
+      <label for="cover-search">Rechercher une photo</label>
+      <input id="cover-search" type="search" name="q" value="{{ query }}" maxlength="200" placeholder="Titre ou nom du fichier">
+    </div>
+    <button class="button button-secondary" type="submit">Rechercher</button>
+    {% if query %}<a class="button button-secondary" href="{% url 'library:album_cover' album.pk %}">Effacer</a>{% endif %}
+  </form>
+
+  {% if page_obj %}
+  <form method="post">
+    {% csrf_token %}
+    <fieldset>
+      <legend>{{ page_obj.paginator.count }} photo{{ page_obj.paginator.count|pluralize }} au choix</legend>
+      <div class="cover-grid">
+        {% for photo in page_obj %}
+        <button class="cover-choice{% if photo.pk == album.cover_id %} is-selected{% endif %}" type="submit" name="cover_photo" value="{{ photo.pk }}" aria-label="Choisir {{ photo }} comme vignette">
+          <img src="{% url 'library:media_file' photo.pk 'thumbnail' %}" alt="" loading="lazy" decoding="async" width="480" height="320">
+          <span class="cover-choice-title">{{ photo }}</span>
+          <span class="cover-choice-action">{% if photo.pk == album.cover_id %}Vignette actuelle{% else %}Choisir cette photo{% endif %}</span>
+        </button>
+        {% endfor %}
+      </div>
+    </fieldset>
+  </form>
+  {% include "library/_media_pagination.html" %}
+  {% else %}
+  <div class="empty-state card">
+    <span class="empty-state-icon" aria-hidden="true">▧</span>
+    <h2>{% if query %}Aucune photo correspondante{% else %}Aucune photo disponible pour la vignette{% endif %}</h2>
+    <p>{% if query %}Essayez un autre titre ou nom de fichier.{% else %}Ajoutez des photos à cet album ou à ses sous-albums. Elles apparaîtront ici une fois leurs aperçus prêts.{% endif %}</p>
+    <a class="button button-secondary" href="{% url 'library:album_detail' album.pk %}">Retour à l’album</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

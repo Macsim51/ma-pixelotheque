@@ -10,6 +10,15 @@ from django.utils import timezone
 
 
 class AlbumQuerySet(models.QuerySet):
+    def manageable_by(self, user):
+        if not user.is_authenticated or not user.is_active:
+            return self.none()
+        if user.is_superuser:
+            return self
+        if user.role != "family":
+            return self.none()
+        return self.filter(owner_id=user.pk)
+
     def uploadable_to(self, user):
         """Albums that may receive contributions, without per-album queries."""
         if not user.is_authenticated or not user.is_active:
@@ -74,6 +83,23 @@ class Album(models.Model):
         verbose_name="créateur",
     )
     title = models.CharField("titre", max_length=150)
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        related_name="children",
+        verbose_name="album parent",
+        null=True,
+        blank=True,
+    )
+    cover_photo = models.ForeignKey(
+        "MediaItem",
+        on_delete=models.SET_NULL,
+        related_name="album_covers",
+        verbose_name="photo de vignette",
+        null=True,
+        blank=True,
+        editable=False,
+    )
     description = models.TextField("description", max_length=2000, blank=True)
     visibility = models.CharField(
         "visibilité",
@@ -94,9 +120,51 @@ class Album(models.Model):
         ordering = ("-created_at", "-id")
         verbose_name = "album"
         verbose_name_plural = "albums"
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(parent=models.F("id")), name="album_not_own_parent"
+            ),
+        ]
 
     def __str__(self):
         return self.title
+
+    def validate_parent(self, using=None):
+        """Reject cycles, including a move beneath any of this album's descendants."""
+        seen = {self.pk}
+        parent_id = self.parent_id
+        parents = type(self).objects.using(using or self._state.db)
+        while parent_id is not None:
+            if parent_id in seen:
+                raise ValidationError({"parent": "Un album ne peut pas être rangé dans lui-même ou dans l’un de ses sous-albums."})
+            seen.add(parent_id)
+            parent_id = parents.filter(pk=parent_id).values_list("parent_id", flat=True).first()
+
+    def descendant_ids(self):
+        """Read only hierarchy IDs; never expose inaccessible album metadata."""
+        from collections import defaultdict
+
+        children = defaultdict(list)
+        for album_id, parent_id in type(self).objects.values_list("pk", "parent_id"):
+            children[parent_id].append(album_id)
+        descendants = set()
+        pending = list(children[self.pk])
+        while pending:
+            album_id = pending.pop()
+            if album_id not in descendants:
+                descendants.add(album_id)
+                pending.extend(children[album_id])
+        return descendants
+
+    def clean(self):
+        super().clean()
+        self.validate_parent()
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        # SQLite's IMMEDIATE transactions serialize concurrent hierarchy changes.
+        self.validate_parent(using=kwargs.get("using"))
+        return super().save(*args, **kwargs)
 
     def can_manage(self, user):
         from .permissions import can_manage_album
